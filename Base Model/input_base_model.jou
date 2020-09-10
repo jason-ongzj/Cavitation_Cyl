@@ -1,0 +1,112 @@
+rc 2D_Mesh.cas
+
+;enable transient solver
+/define/models/unsteady-1st-order yes
+
+;define solver, multiphase model, turbulence model
+/define/models/multiphase/model mixture
+/define/models/viscous kw-sst yes
+/define/models/viscous/turbulence-expert/kato-launder-model yes
+/define/user-defined/compiled-functions compile "libudf" yes "kw_mu_t.c" , ,
+/define/user-defined/compiled-functions load "libudf"
+
+/define/models/viscous/user-defined "mut_rev::libudf"
+
+;define materials
+/define/materials/copy fluid water-liquid
+/define/materials/change-create water-liquid water-liquid yes constant 996.57 no no yes constant 8.53e-04 no no no
+/define/materials/copy fluid water-vapor
+/define/materials/change-create water-vapor water-vapor yes constant 0.0261 no no no no no no
+
+;define phases
+/define/phases/phase-domain phase-1 liquid yes water-liquid
+/define/phases/phase-domain phase-2 vapor yes water-vapor no no , ,
+
+;Set cavitation model 0:zwart - 1:schnerr
+;Modify cavitation parameters according to Zwart's paper
+/define/phases/interaction-domain no no 1 liquid vapor cavitation 0 yes 1e-06 5e-04 0.4 0.001 yes 0.39 no no no no
+
+;Define no-slip between the phases
+/define/models/multiphase/mixture-parameters no implicit
+
+;set reference values
+/report/reference-values/area 0.0096
+/report/reference-values/temperature 300
+/report/reference-values/length 0.048
+/report/reference-values/velocity 8.92
+/report/reference-values/pressure 90783
+/report/reference-values/density 996.57
+
+;define boundary conditions
+;VELOCITY-INLET
+/define/boundary-conditions/velocity-inlet inlet mixture no no yes yes no 8.92 no 0 no no no yes 3 0.0774
+
+;set operating conditions
+/define/operating-conditions/operating-pressure 0
+
+;PRESSURE OUTLET
+/define/boundary-conditions/pressure-outlet outlet mixture no 90783 no yes no no no yes 5 0.0774 yes no no
+/define/boundary-conditions/pressure-outlet outlet vapor yes no 1e-05
+
+;set monitors and residuals
+/solve/monitors/force/set-lift-monitor lift yes cylinder , yes yes lift_coefficient yes 2 no 0 1 0
+
+;set mass flux monitor
+/solve/monitors/surface/set-monitor mass-flux "Mass Flow Rate" mixture inlet outlet , no yes no 2 no flow-time
+
+;set velocity monitor
+/solve/monitors/surface/set-monitor velocity-magnitude "Facet Average" mixture velocity-magnitude outlet , no no yes average-velocity-magnitude 1 yes flow-time
+/solve/monitors/surface/set-monitor max-velocity-magnitude "Facet Maximum" mixture velocity-magnitude outlet , no no yes max-velocity-magnitude 1 yes flow-time
+
+;set pressure monitor
+/solve/monitors/surface/set-monitor pressure-average-inlet "Facet Average" mixture pressure inlet , no no yes average-pressure 1 yes flow-time
+/solve/monitors/surface/set-monitor max-pressure-inlet "Facet Maximum" mixture pressure inlet , no no yes max-pressure 1 yes flow-time
+
+;set p-v coupling
+/solve/set/p-v-coupling 24 no no
+
+;set initialization
+/solve/initialize/set-hyb-initialization general 20 1 1 absolute no no no
+
+;initialize flow (hybrid)
+/solve/initialize/hyb-initialization
+
+;set residuals convergence criteria
+/solve/monitors/residual/convergence-criteria 1e-09 1e-06 1e-06 1e-06 1e-06 1e-03
+
+;set reporting interval
+/solve/set/reporting-interval 1
+
+;set time step
+/solve/set/time-step 1e-04
+
+;set data-sampling
+/solve/set/data-sampling yes 1 yes yes
+
+;solve first order
+/solve/dual-time-iterate 200 28
+
+;change discretization schemes to second order
+/solve/set/discretization-scheme/mom 4
+/solve/set/discretization-scheme/k 4
+/solve/set/discretization-scheme/mp 4
+/solve/set/discretization-scheme/omega 4
+
+;enable second order in time - bounded
+/define/models/unsteady-2nd-order-bounded yes
+
+/solve/dual-time-iterate 1000 40
+/file/write-data 2DMesh-1-1200.dat
+
+/solve/dual-time-iterate 3800 28
+/file/write-data 2DMesh-1-5000.dat
+
+;set autosaving
+/file/auto-save data-frequency 100
+/solve/dual-time-iterate 1000 28
+
+;report mass imbalances
+/report/fluxes/mass-flow mixture yes yes report-mass-flux
+
+/file/write-data 2Dfinal-output.dat
+/file/write-case 2DMesh-2nd-order.cas
