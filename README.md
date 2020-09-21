@@ -11,4 +11,4 @@ The base model includes the results obtained in the simulation where only a modi
 
 The density and streamline visualizations for both models are as shown above. The main difference in both models is the additional capture of shear-layer instabilities evident in the streamline visualization using the hybrid model. Both simulations were ran in ANSYS Fluent 2019R2 and post-processed in Tecplot 360.
 
-[1] A. Kubota et al. “Unsteady Structure Measurement of Cloud Cavitation on a Foil Section Using Conditional Sampling Technique”. J. Fluids Eng.111 (1989), pp. 204–210.
+[1] A. Kubota, H. Kato, and H. Yamaguchi. “A new modelling of cavitating flows: a numerical study of unsteady cavitation on a hydrofoil section”. J. Fluid Mech. 240 (1992), pp. 59–96.
